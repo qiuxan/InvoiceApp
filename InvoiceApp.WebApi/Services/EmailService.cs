@@ -1,8 +1,11 @@
 ﻿using InvoiceApp.WebApi.Models;
+using Microsoft.Extensions.Logging;
+using System.Net.Mail;
+
 
 namespace InvoiceApp.WebApi.Services;
 
-public class EmailService : IEmailService
+public class EmailService(ILogger<IEmailService> logger, IEmailSender emailSender) : IEmailService
 {
 
     public (string to, string subject, string body) GenerateInvoiceEmail(Invoice invoice)
@@ -27,10 +30,25 @@ public class EmailService : IEmailService
         return (to, subject, body);
     }
 
-    public Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendEmailAsync(string to, string subject, string body)
     {
         // Mock the email sending process
         // In real world, you may use a third-party email service, such as SendGrid, MailChimp, Azure Logic Apps, etc.
-        return Task.Delay(100);
+        logger.LogInformation($"Sending email to {to} with subject {subject} and body {body}");
+
+        try
+        {
+            await emailSender.SendEmailAsync(to, subject, body);
+            logger.LogInformation($"Email sent to {to} with subject {subject}");
+        }
+        catch (SmtpException e)
+        {
+            logger.LogError(e, $"SmtpClient error occurs. Failed to send email to {to} with subject {subject}.");
+
+        }
+        catch (Exception e) {
+            logger.LogError(e, $"Failed to send email to {to} with subject {subject}.");
+        }
+
     }
 }
